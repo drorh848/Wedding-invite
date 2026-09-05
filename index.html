@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <!-- ============================================================
      WEDDING RSVP  |  אמרי וליטל חמרי  ·  8.10.2026
-     גרסה 1.4  ·  05.09.2026
+     גרסה 1.5  ·  05.09.2026
      שינויים בגרסה זו:
-       1. המחוון הפך לקבוע (fixed) בתחתית המסך, על גלולה סגולה קריאה
-       2. צמצום שטח ריק בראש העמוד (ריפוד, קישוט עליון, תווית, תמונה)
-       3. המחוון נעלם רק כשכפתור "אישור הגעה" נכנס לתצוגה (IntersectionObserver)
-          ומוסתר אוטומטית בעמודים שאינם ההזמנה
+       1. המחוון עבר לשכבת-על בתוך תמונת ההזמנה — ידיים 👇 גדולות בשוליים
+          הריקים משני הצדדים, והטקסט + החצים מתחתן בתחתית התמונה
+       2. הטקסט בסגול כהה עם הילה לבנה, לקריאות על רקע הקרם
+       3. בוטלה הגלולה הצפה של גרסה 1.4
+     גרסה 1.4  ·  05.09.2026:
+       1. צמצום שטח ריק בראש העמוד (ריפוד, קישוט עליון, תווית, תמונה)
+       2. המחוון נעלם כשכפתור "אישור הגעה" נכנס לתצוגה (IntersectionObserver)
      גרסה 1.3  ·  05.09.2026:
        1. מחוון גלילה בולט מתחת לתמונת ההזמנה ("גללו למטה לאישור הגעה")
           — פועם, עם ידיים 👇 וחצים ⌄
@@ -85,53 +88,53 @@
     to   { opacity: 1; transform: translateY(0); }
   }
 
-  /* ===== SCROLL HINT ===== */
+  /* ===== SCROLL HINT — שכבת-על בתוך תמונת ההזמנה ===== */
   .scroll-hint {
-    position: fixed; left: 50%; bottom: 14px; z-index: 20;
-    transform: translateX(-50%);
-    display: flex; flex-direction: column; align-items: center;
-    gap: 4px; padding: 10px 22px 12px;
-    background: rgba(46,0,87,0.72);
-    border: 1px solid rgba(201,150,58,0.45);
-    border-radius: 999px;
-    box-shadow: 0 6px 24px rgba(0,0,0,0.45);
-    -webkit-backdrop-filter: blur(6px);
-    backdrop-filter: blur(6px);
+    position: absolute; inset: 0; z-index: 5;
     pointer-events: none;
     transition: opacity 0.4s ease;
+  }
+  .scroll-hint.hide { opacity: 0; }
+
+  .scroll-hint .hand {
+    position: absolute; bottom: 26%;
+    font-size: 40px; line-height: 1;
+    animation: handBounce 1.4s ease-in-out infinite;
+  }
+  .scroll-hint .hand-right { right: 6%; }
+  .scroll-hint .hand-left  { left: 6%;  animation-delay: 0.15s; }
+
+  .scroll-hint-bottom {
+    position: absolute; left: 0; right: 0; bottom: 5%;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
     animation: hintPulse 1.4s ease-in-out infinite;
   }
   .scroll-hint-text {
-    display: flex; align-items: center; gap: 10px;
-    font-size: 19px; font-weight: 700; color: var(--gold-light);
+    font-size: 15px; font-weight: 700; color: #4a0080;
     letter-spacing: 0.5px;
-    text-shadow: 0 0 14px rgba(155,89,182,0.55);
-  }
-  .scroll-hint-text .hand {
-    font-size: 24px;
-    animation: handBounce 1.4s ease-in-out infinite;
+    text-shadow: 0 0 8px rgba(255,255,255,0.95), 0 0 3px rgba(255,255,255,1);
   }
   .scroll-hint-arrows {
     display: flex; flex-direction: column; align-items: center;
     line-height: 0.7;
   }
   .scroll-hint-arrows span {
-    font-size: 30px; color: var(--gold);
+    font-size: 26px; color: #4a0080;
+    text-shadow: 0 0 8px rgba(255,255,255,0.95);
     animation: bounceArrow 1.4s ease-in-out infinite;
   }
   .scroll-hint-arrows span:nth-child(2) { animation-delay: 0.2s; opacity: 0.6; }
-  .scroll-hint.hide { opacity: 0; }
   @keyframes bounceArrow {
     0%, 100% { transform: translateY(0); opacity: 0.7; }
-    50% { transform: translateY(8px); opacity: 1; }
+    50% { transform: translateY(6px); opacity: 1; }
   }
   @keyframes handBounce {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(6px); }
   }
   @keyframes hintPulse {
-    0%, 100% { transform: translateX(-50%) scale(1); }
-    50% { transform: translateX(-50%) scale(1.05); }
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
   }
 
   .gold-divider {
@@ -159,6 +162,7 @@
   }
 
   .invite-image-container {
+    position: relative;
     width: 100%; max-width: 380px; margin: 0 auto 14px;
     border-radius: 4px; overflow: hidden;
     border: 1px solid rgba(201,150,58,0.3);
@@ -355,6 +359,18 @@
 
     <div class="invite-image-container">
       <img src="wedding.png" alt="הזמנה לחתונה">
+
+      <div class="scroll-hint" id="scrollHint">
+        <span class="hand hand-right">👇</span>
+        <span class="hand hand-left">👇</span>
+        <div class="scroll-hint-bottom">
+          <div class="scroll-hint-text">גללו למטה לאישור הגעה</div>
+          <div class="scroll-hint-arrows">
+            <span>⌄</span>
+            <span>⌄</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="gold-divider"><span>✦</span></div>
@@ -373,19 +389,6 @@
     <button class="rsvp-btn" type="button" id="rsvpBtn" onclick="showPage('page-rsvp')">
       ✅ אישור הגעה ←
     </button>
-  </div>
-</div>
-
-<!-- מחוון גלילה קבוע — מוצג רק בעמוד ההזמנה -->
-<div class="scroll-hint" id="scrollHint">
-  <div class="scroll-hint-text">
-    <span class="hand">👇</span>
-    גללו למטה לאישור הגעה
-    <span class="hand">👇</span>
-  </div>
-  <div class="scroll-hint-arrows">
-    <span>⌄</span>
-    <span>⌄</span>
   </div>
 </div>
 
@@ -532,7 +535,7 @@
 
 <script>
   /* ===== סימון גרסה ===== */
-  const APP_VERSION      = '1.4';
+  const APP_VERSION      = '1.5';
   const APP_VERSION_DATE = '05.09.2026';
   const MAX_GUESTS       = 20;
 
@@ -735,8 +738,6 @@
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(id).classList.add('active');
     window.scrollTo(0, 0);
-    var hintEl = document.getElementById('scrollHint');
-    if (hintEl) hintEl.style.display = (id === 'page-invite') ? '' : 'none';
     if (id === 'page-admin') loadAdminData();
   }
   window.showPage = showPage;
