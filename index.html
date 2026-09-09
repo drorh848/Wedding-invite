@@ -1,8 +1,17 @@
 <!DOCTYPE html>
 <!-- ============================================================
      WEDDING RSVP  |  אמרי וליטל חמרי  ·  8.10.2026
-     גרסה 1.5  ·  05.09.2026
-     שינויים בגרסה זו:
+     גרסה 1.6  ·  09.09.2026
+     שינויים בגרסה זו (מניעת כפילות אישורים):
+       1. איחוד בין קישור אישי לקישור כללי — לפני שמירה בקישור אישי
+          נבדק אם כבר קיים אישור לפי הטלפון, ומתבצע עדכון במקום רשומה חדשה
+       2. נירמול מלא של מספר הטלפון (הוספת 0 מוביל, 00972, 972) —
+          אותו אדם מזוהה גם אם רשם את המספר בצורה אחרת
+       3. חובת טלפון תקין ומלא (9 ספרות ומעלה) — בוטל מסלול השמירה
+          במפתח אקראי שיצר רשומה חדשה בכל שליחה
+       4. הודעת האזהרה לפני דריסה מציגה את שם בעל האישור הקיים
+       5. לוח הבקרה מזהה כפילויות (לפי טלפון או שם) ומאפשר מיזוג בלחיצה
+     גרסה 1.5  ·  05.09.2026:
        1. המחוון עבר לשכבת-על בתוך תמונת ההזמנה — ידיים 👇 גדולות בשוליים
           הריקים משני הצדדים, והטקסט + החצים מתחתן בתחתית התמונה
        2. הטקסט בסגול כהה עם הילה לבנה, לקריאות על רקע הקרם
@@ -328,6 +337,29 @@
     transition:all 0.2s; white-space:nowrap;
   }
   .delete-btn:hover { background:rgba(231,76,60,0.1); color:#e74c3c; border-color:#e74c3c; }
+
+  /* ===== זיהוי כפילויות בלוח הבקרה ===== */
+  .dup-banner {
+    display:none; margin-bottom:12px; padding:12px 14px;
+    background:rgba(231,76,60,0.08); border:1px solid rgba(231,76,60,0.35);
+    border-radius:4px; font-size:13px; color:rgba(253,246,255,0.75);
+  }
+  .dup-banner .dup-title { color:#e8a196; letter-spacing:1px; margin-bottom:10px; }
+  .dup-group {
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px; padding:8px 0; border-top:1px solid rgba(231,76,60,0.15);
+  }
+  .dup-group-name { font-size:13px; color:var(--cream); flex:1; text-align:right; }
+  .dup-group-info { font-size:11px; color:rgba(253,246,255,0.45); }
+  .merge-btn {
+    background:transparent; border:1px solid rgba(201,150,58,0.45);
+    color:var(--gold-light); font-size:11px; padding:5px 12px;
+    border-radius:3px; cursor:pointer; font-family:'Noto Serif Hebrew',serif;
+    transition:all 0.2s; white-space:nowrap;
+  }
+  .merge-btn:hover { background:rgba(201,150,58,0.12); border-color:var(--gold); }
+  .guest-row.is-dup { border-color:rgba(231,76,60,0.4); background:rgba(231,76,60,0.06); }
+  .dup-flag { font-size:11px; color:#e8a196; white-space:nowrap; }
   .guests-list::-webkit-scrollbar { width:4px; }
   .guests-list::-webkit-scrollbar-thumb { background:rgba(201,150,58,0.3); border-radius:2px; }
 </style>
@@ -492,6 +524,7 @@
         <div class="stat-label">סה"כ אנשים</div>
       </div>
     </div>
+    <div class="dup-banner" id="dupBanner"></div>
     <div class="section-title">רשימת מאשרים</div>
     <div class="guests-list" id="guestsList"><div class="empty-state">טוען...</div></div>
     <button class="logout-btn" type="button" onclick="showPage('page-invite')">← יציאה</button>
@@ -535,8 +568,8 @@
 
 <script>
   /* ===== סימון גרסה ===== */
-  const APP_VERSION      = '1.5';
-  const APP_VERSION_DATE = '05.09.2026';
+  const APP_VERSION      = '1.6';
+  const APP_VERSION_DATE = '09.09.2026';
   const MAX_GUESTS       = 20;
 
   console.log('%c WEDDING RSVP v' + APP_VERSION + ' · ' + APP_VERSION_DATE + ' ',
@@ -561,12 +594,19 @@
   const LS_KEY = 'wedding_rsvp_local';
 
   /* ===== עזרי טלפון ===== */
+  /* נירמול מספר טלפון לצורה קנונית אחת — כדי שאותו אדם יזוהה
+     גם אם רשם את המספר בפעם השנייה בצורה שונה.
+     דוגמאות: +972-50-123-4567 / 00972501234567 / 501234567 → 0501234567 */
   function normalizePhone(raw) {
     let p = String(raw || '').replace(/[-\s().+]/g, '').replace(/[oO]/g, '0');
-    if (p.startsWith('972')) p = '0' + p.slice(3);
+    p = p.replace(/\D/g, '');                       // ספרות בלבד
+    if (p.startsWith('00972')) p = '0' + p.slice(5);
+    else if (p.startsWith('972')) p = '0' + p.slice(3);
+    // מספר נייד/קווי שנרשם ללא ה־0 המוביל
+    if (p.length === 9 && p[0] !== '0') p = '0' + p;
     return p;
   }
-  function phoneDigits(raw) { return normalizePhone(raw).replace(/\D/g, ''); }
+  function phoneDigits(raw) { return normalizePhone(raw); }
 
   function fmtDate(ts) {
     if (!ts || typeof ts !== 'number') return '';
@@ -725,9 +765,28 @@
       const nh = document.getElementById('nameHint');
       if (nh) nh.style.display = 'block';
 
-      // בדיקה אם כבר נשלח אישור עבור המזהה הזה
+      // 1. בדיקה אם כבר נשלח אישור עבור המזהה הזה
       const rSnap = await window._get(window._ref(window._db, 'wedding_rsvp/' + guestId));
-      if (rSnap.exists()) applyExisting(guestId, rSnap.val() || {});
+      if (rSnap.exists()) { applyExisting(guestId, rSnap.val() || {}); checkForm(); return; }
+
+      // 2. אולי אותו אדם כבר אישר דרך הקישור הכללי — חיפוש לפי הטלפון
+      //    שברשימת המוזמנים. אם נמצא, נעדכן את אותה רשומה במקום ליצור חדשה.
+      const digits = phoneDigits(linkedPhone);
+      if (digits.length >= 9) {
+        const pKey  = 'p_' + digits;
+        const pSnap = await window._get(window._ref(window._db, 'wedding_rsvp/' + pKey));
+        if (pSnap.exists()) { applyExisting(pKey, pSnap.val() || {}); checkForm(); return; }
+
+        // 3. גיבוי: רשומות ישנות שנשמרו במפתח אקראי
+        const all = await window._get(window._rsvpRef);
+        if (all.exists()) {
+          const dataAll = all.val() || {};
+          for (const k of Object.keys(dataAll)) {
+            const v = dataAll[k];
+            if (v && phoneDigits(v.phone) === digits) { applyExisting(k, v); checkForm(); return; }
+          }
+        }
+      }
     } catch (e) {
       // אם משהו נכשל — הטופס פשוט נשאר ידני כרגיל
     }
@@ -761,7 +820,9 @@
   function checkForm() {
     const name  = document.getElementById('guestName').value.trim();
     const phone = document.getElementById('guestPhone').value.trim();
-    const phoneOk = guestId ? true : phone.length >= 9;   // בקישור אישי הטלפון אינו נדרש
+    // בודקים ספרות אמיתיות (לא אורך טקסט עם מקפים) — מספר חסר לא מזוהה
+    // בחיפוש הכפילויות ולכן היה יוצר רשומה חדשה בכל שליחה
+    const phoneOk = guestId ? true : phoneDigits(phone).length >= 9;
     document.getElementById('submitBtn').disabled = !(name.length >= 2 && phoneOk && attending !== null);
   }
   document.getElementById('guestName').addEventListener('input', checkForm);
@@ -783,9 +844,18 @@
 
     // ===== אישור לפני דריסת רשומה קיימת =====
     if (isUpdate && prevRecord) {
-      const before = prevRecord.attending ? `${prevRecord.guests} אנשים` : 'לא מגיע';
-      const after  = attending ? `${guestCount} אנשים` : 'לא מגיע';
-      const ok = confirm(`כבר קיים אישור בשמך.\n\nהקודם: ${before}\nהחדש: ${after}\n\nהאישור הקודם יוחלף. להמשיך?`);
+      const prevName = String(prevRecord.name || '').trim();
+      const before   = prevRecord.attending ? `${prevRecord.guests} אנשים` : 'לא מגיע';
+      const after    = attending ? `${guestCount} אנשים` : 'לא מגיע';
+      // מציגים את השם הקיים — כדי שלא ידרסו בטעות אישור של אדם אחר
+      // (למשל בני זוג שמשתמשים באותו מספר טלפון)
+      const head = prevName
+        ? `כבר קיים אישור בשם: ${prevName}`
+        : 'כבר קיים אישור עם פרטים אלה.';
+      const warn = (prevName && prevName !== name)
+        ? `\n\n⚠️ שים לב: השם שהזנת (${name}) שונה מהשם באישור הקיים.\nאם זה לא אתה — בטל, ובדוק את מספר הטלפון.`
+        : '';
+      const ok = confirm(`${head}\n\nהקודם: ${before}\nהחדש: ${after}${warn}\n\nהאישור הקודם יוחלף. להמשיך?`);
       if (!ok) return;
     }
 
@@ -802,19 +872,20 @@
 
     try {
       if (window._firebaseReady) {
-        if (guestId) {
-          // קישור אישי — מפתח קבוע לפי המזהה
-          await window._set(window._ref(window._db, 'wedding_rsvp/' + guestId), data);
-        } else if (existingKey) {
-          // נמצא אישור קיים — עדכון באותה רשומה, בלי כפילות
-          await window._set(window._ref(window._db, 'wedding_rsvp/' + existingKey), data);
-        } else if (digits.length >= 9) {
-          // רשומה חדשה במפתח קבוע לפי הטלפון
-          await window._set(window._ref(window._db, 'wedding_rsvp/p_' + digits), data);
-        } else {
-          // גיבוי: אין טלפון תקין
-          await window._push(window._rsvpRef, data);
+        // סדר העדיפויות: רשומה קיימת שזוהתה ← מזהה אישי ← מפתח לפי טלפון.
+        // אין יותר שמירה במפתח אקראי — כל אישור חייב מפתח קבוע.
+        let saveKey = null;
+        if (existingKey)            saveKey = existingKey;          // עדכון במקום כפילות
+        else if (guestId)           saveKey = guestId;              // קישור אישי
+        else if (digits.length >= 9) saveKey = 'p_' + digits;       // קישור כללי
+
+        if (!saveKey) {
+          btn.disabled = false; btn.textContent = btnLabel;
+          alert('מספר הטלפון אינו תקין.\nיש להזין מספר מלא (לפחות 9 ספרות) כדי שנוכל לזהות את האישור.');
+          return;
         }
+        await window._set(window._ref(window._db, 'wedding_rsvp/' + saveKey), data);
+        existingKey = saveKey;   // שליחה חוזרת מיד אחר כך תעדכן ולא תכפיל
       }
 
       // שמירה מקומית לזיהוי בכניסה חוזרת מאותו מכשיר
@@ -896,11 +967,21 @@
       const entriesWithKeys = Object.entries(data);
       entriesWithKeys.sort((a, b) => (b[1].timestamp || 0) - (a[1].timestamp || 0));
 
+      // ===== זיהוי כפילויות (לפי טלפון או לפי שם) =====
+      window._adminData = data;
+      const groups = findDuplicateGroups(data);
+      window._dupGroups = groups;
+      const dupKeys = new Set();
+      groups.forEach(g => g.forEach(k => dupKeys.add(k)));
+      renderDupBanner(groups, data);
+
       list.innerHTML = entriesWithKeys.map(([key, e]) => {
         const safeName = String(e.name || '').replace(/'/g, "\\'");
+        const isDup    = dupKeys.has(key);
         return `
-        <div class="guest-row">
+        <div class="guest-row${isDup ? ' is-dup' : ''}">
           <div class="guest-name">${e.name}</div>
+          ${isDup ? `<div class="dup-flag">⚠ כפילות</div>` : ''}
           ${e.attending ? `<div class="guest-count">${e.guests} אנשים</div>` : ''}
           <div class="guest-badge ${e.attending ? 'badge-yes' : 'badge-no'}">${e.attending ? 'מגיע' : 'לא מגיע'}</div>
           <button class="delete-btn" type="button" onclick="deleteRsvp('${key}', '${safeName}')">מחק</button>
@@ -908,6 +989,121 @@
     });
   }
   window.loadAdminData = loadAdminData;
+
+  /* ===== איתור קבוצות של רשומות שנראות כמו אותו אדם =====
+     שתי רשומות שייכות לאותה קבוצה אם יש להן אותו טלפון או אותו שם.
+     (השיוך מדבק: אם א'=ב' לפי טלפון וב'=ג' לפי שם — כולן קבוצה אחת) */
+  function normName(n) {
+    return String(n || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  }
+  function findDuplicateGroups(data) {
+    const keys   = Object.keys(data || {});
+    const parent = {};
+    keys.forEach(k => parent[k] = k);
+    function find(x) { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; }
+    function union(a, b) { const ra = find(a), rb = find(b); if (ra !== rb) parent[ra] = rb; }
+
+    const byPhone = {}, byName = {};
+    keys.forEach(k => {
+      const e = data[k] || {};
+      const ph = phoneDigits(e.phone);
+      if (ph.length >= 9) { (byPhone[ph] = byPhone[ph] || []).push(k); }
+      const nm = normName(e.name);
+      if (nm.length >= 2) { (byName[nm] = byName[nm] || []).push(k); }
+    });
+    // איחוד לפי טלפון — זיהוי ודאי
+    Object.values(byPhone).forEach(arr => {
+      for (let i = 1; i < arr.length; i++) union(arr[0], arr[i]);
+    });
+    // איחוד לפי שם — רק אם אין התנגשות טלפונים, כדי לא לסמן
+    // בטעות שני אנשים שונים בעלי אותו שם עם מספרים שונים
+    Object.values(byName).forEach(arr => {
+      const phones = new Set();
+      arr.forEach(k => {
+        const ph = phoneDigits((data[k] || {}).phone);
+        if (ph.length >= 9) phones.add(ph);
+      });
+      if (phones.size > 1) return;
+      for (let i = 1; i < arr.length; i++) union(arr[0], arr[i]);
+    });
+
+    const buckets = {};
+    keys.forEach(k => { const r = find(k); (buckets[r] = buckets[r] || []).push(k); });
+    return Object.values(buckets).filter(g => g.length > 1);
+  }
+
+  function renderDupBanner(groups, data) {
+    const banner = document.getElementById('dupBanner');
+    if (!banner) return;
+    if (!groups.length) { banner.style.display = 'none'; banner.innerHTML = ''; return; }
+
+    const rows = groups.map((g, i) => {
+      const recs = g.map(k => data[k] || {});
+      const name = recs.map(r => r.name).find(n => n) || '(ללא שם)';
+      const ph   = recs.map(r => phoneDigits(r.phone)).find(p => p && p.length >= 9) || '';
+      const info = `${g.length} רשומות${ph ? ' · ' + ph : ''}`;
+      return `
+        <div class="dup-group">
+          <div class="dup-group-name">${name}<div class="dup-group-info">${info}</div></div>
+          <button class="merge-btn" type="button" onclick="mergeDupGroup(${i})">מזג</button>
+        </div>`;
+    }).join('');
+
+    banner.innerHTML =
+      `<div class="dup-title">⚠️ נמצאו ${groups.length} כפילויות אפשריות</div>${rows}`;
+    banner.style.display = 'block';
+  }
+
+  /* ===== מיזוג קבוצת כפילויות =====
+     נשמר האישור העדכני ביותר, ושאר הרשומות של אותו אדם נמחקות. */
+  async function mergeDupGroup(idx) {
+    const groups = window._dupGroups || [];
+    const data   = window._adminData || {};
+    const g      = groups[idx];
+    if (!g || g.length < 2) return;
+
+    const recs = g.map(k => ({ key: k, rec: data[k] || {} }))
+                  .sort((a, b) => (b.rec.timestamp || 0) - (a.rec.timestamp || 0));
+    const newest = recs[0];
+
+    // מפתח קבוע עדיף: p_<טלפון> ← מזהה אישי ← המפתח של הרשומה העדכנית
+    const primary =
+      (recs.find(r => r.key.indexOf('p_') === 0) ||
+       recs.find(r => r.rec.guestId) ||
+       newest).key;
+
+    const merged = {
+      name:      newest.rec.name || recs.map(r => r.rec.name).find(n => n) || '',
+      phone:     normalizePhone(recs.map(r => r.rec.phone).find(p => phoneDigits(p).length >= 9) || newest.rec.phone || ''),
+      attending: !!newest.rec.attending,
+      guests:    newest.rec.attending ? (newest.rec.guests || 1) : 0,
+      timestamp: newest.rec.timestamp || Date.now()
+    };
+    const gid = recs.map(r => r.rec.guestId).find(x => x);
+    if (gid) merged.guestId = gid;
+
+    const detail = recs.map(r =>
+      `• ${r.rec.name || '(ללא שם)'} — ${r.rec.attending ? r.rec.guests + ' אנשים' : 'לא מגיע'}` +
+      `${r.key === newest.key ? '   ← העדכני ביותר' : ''}`).join('\n');
+
+    const ok = confirm(
+      `מיזוג ${g.length} רשומות לאדם אחד:\n\n${detail}\n\n` +
+      `יישמר האישור העדכני ביותר: ${merged.attending ? merged.guests + ' אנשים' : 'לא מגיע'}\n` +
+      `שאר הרשומות יימחקו. הפעולה סופית.\n\nלהמשיך?`);
+    if (!ok) return;
+
+    try {
+      await window._set(window._ref(window._db, 'wedding_rsvp/' + primary), merged);
+      for (const r of recs) {
+        if (r.key !== primary) {
+          await window._remove(window._ref(window._db, 'wedding_rsvp/' + r.key));
+        }
+      }
+    } catch (e) {
+      alert('שגיאה במיזוג: ' + (e && e.message ? e.message : e));
+    }
+  }
+  window.mergeDupGroup = mergeDupGroup;
 
   async function deleteRsvp(key, name) {
     if (!confirm(`האם אתה בטוח שרוצה למחוק את ${name}?`)) return;
