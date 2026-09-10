@@ -105,22 +105,27 @@
   }
   .scroll-hint.hide { opacity: 0; }
 
+  /* הידיים מעוגנות לשורת הטקסט — נעות איתה בכל גודל מסך */
   .scroll-hint .hand {
-    position: absolute; bottom: 26%;
-    font-size: 40px; line-height: 1;
+    font-size: clamp(24px, 7.5vw, 38px); line-height: 1;
+    flex-shrink: 0;
     animation: handBounce 1.4s ease-in-out infinite;
   }
-  .scroll-hint .hand-right { right: 6%; }
-  .scroll-hint .hand-left  { left: 6%;  animation-delay: 0.15s; }
+  .scroll-hint .hand-left { animation-delay: 0.15s; }
 
   .scroll-hint-bottom {
     position: absolute; left: 0; right: 0; bottom: 5%;
     display: flex; flex-direction: column; align-items: center; gap: 2px;
     animation: hintPulse 1.4s ease-in-out infinite;
   }
+  .scroll-hint-row {
+    display: flex; align-items: center; justify-content: space-between;
+    width: 100%; padding: 0 4%;
+    box-sizing: border-box;
+  }
   .scroll-hint-text {
-    font-size: 15px; font-weight: 700; color: #4a0080;
-    letter-spacing: 0.5px;
+    font-size: clamp(12px, 4vw, 15px); font-weight: 700; color: #4a0080;
+    letter-spacing: 0.5px; white-space: nowrap;
     text-shadow: 0 0 8px rgba(255,255,255,0.95), 0 0 3px rgba(255,255,255,1);
   }
   .scroll-hint-arrows {
@@ -393,10 +398,12 @@
       <img src="wedding.png" alt="הזמנה לחתונה">
 
       <div class="scroll-hint" id="scrollHint">
-        <span class="hand hand-right">👇</span>
-        <span class="hand hand-left">👇</span>
         <div class="scroll-hint-bottom">
-          <div class="scroll-hint-text">גללו למטה לאישור הגעה</div>
+          <div class="scroll-hint-row">
+            <span class="hand hand-right">👇</span>
+            <div class="scroll-hint-text">גללו למטה לאישור הגעה</div>
+            <span class="hand hand-left">👇</span>
+          </div>
           <div class="scroll-hint-arrows">
             <span>⌄</span>
             <span>⌄</span>
@@ -568,8 +575,8 @@
 
 <script>
   /* ===== סימון גרסה ===== */
-  const APP_VERSION      = '1.6';
-  const APP_VERSION_DATE = '09.09.2026';
+  const APP_VERSION      = '1.7';
+  const APP_VERSION_DATE = '10.09.2026';
   const MAX_GUESTS       = 20;
 
   console.log('%c WEDDING RSVP v' + APP_VERSION + ' · ' + APP_VERSION_DATE + ' ',
